@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MixedTools</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19; --card-bg: rgba(255, 255, 255, 0.03); --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff; --text-muted: #94a3b8;
+            --accent-1: #6366f1; --accent-2: #ec4899; --accent-3: #14b8a6; --accent-4: #f59e0b;
+            --neon-glow: rgba(99, 102, 241, 0.6);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
+
+        .bg-blobs { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden; background: radial-gradient(circle at 50% 50%, #111827 0%, #0b0f19 100%); }
+        .blob { position: absolute; filter: blur(80px); border-radius: 50%; opacity: 0.4; animation: float 20s infinite alternate; will-change: transform; }
+        .blob-1 { width: 400px; height: 400px; background: var(--accent-1); top: -100px; left: -100px; }
+        .blob-2 { width: 500px; height: 500px; background: var(--accent-2); bottom: -200px; right: -100px; animation-delay: -10s; }
+        @keyframes float { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(100px,150px) scale(1.2); } }
+
+        header { text-align: center; padding: 30px 20px 20px; position: relative; }
+        header h1 { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
+        .clock-container { font-weight: 300; letter-spacing: 1px; }
+        .clock-time { font-size: 1.5rem; color: #fff; text-shadow: 0 0 10px var(--accent-1); font-weight: 500;}
+        .clock-date { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .top-btn { position: absolute; top: 35px; background: transparent; border: none; color: var(--text-muted); font-size: 1.8rem; cursor: pointer; transition: all 0.3s; z-index: 50; }
+        .top-btn:hover { color: #fff; text-shadow: 0 0 15px var(--accent-1); }
+        #menuBtn { left: 30px; } #editBtn { right: 30px; }
+        #editBtn.active { color: var(--accent-2); animation: pulse 1.5s infinite; transform: rotate(90deg); }
+        @keyframes pulse { 0%, 100% { transform: rotate(90deg) scale(1); } 50% { transform: rotate(90deg) scale(1.1); } }
+
+        .sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh; background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(20px); border-right: 1px solid var(--card-border); z-index: 100; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1); padding: 80px 20px 20px; }
+        .sidebar.open { transform: translateX(300px); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+        .sidebar-btn { width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: #fff; border-radius: 12px; font-size: 1rem; cursor: pointer; transition: 0.3s; text-align: left; }
+        .sidebar-btn:hover { background: var(--accent-1); border-color: var(--accent-1); transform: translateX(5px); }
+        .overlay-bg { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .overlay-bg.show { opacity: 1; pointer-events: all; }
+
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: 90%; max-width: 800px; height: 80vh; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 24px; z-index: 200; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; flex-direction: column; padding: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+        .modal-close { position: absolute; top: 20px; left: 20px; background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid rgba(244,63,94,0.5); width: 40px; height: 40px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; }
+        .modal-close:hover { background: #f43f5e; color: #fff; }
+        .modal h2 { text-align: center; margin-bottom: 20px; color: var(--accent-1); }
+        .modal-body { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #lightEditorArea { width: 100%; height: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; color: #fff; padding: 20px; font-size: 1.1rem; resize: none; outline: none; transition: 0.3s; }
+        .spreadsheet-container { overflow: auto; flex-grow: 1; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--card-border); }
+        table { border-collapse: collapse; width: 100%; min-width: 600px; }
+        td, th { border: 1px solid var(--card-border); padding: 10px; text-align: left; color: #fff; }
+        td { cursor: text; outline: none; } td:focus { background: rgba(99, 102, 241, 0.2); }
+        th { background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 500; text-align: center; }
+        .modal-controls { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; flex-grow: 1; position: relative; }
+        .card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 24px; padding: 25px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, border-color 0.3s; display: flex; flex-direction: column; position: relative; }
+        .card:hover { transform: translateY(-5px); }
+        .card h2 { font-size: 1.2rem; margin-bottom: 20px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .card-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: 0.3s; }
+        body.is-edit-mode .card-controls { opacity: 1; pointer-events: all; }
+        body.is-edit-mode .card { border: 1px dashed var(--accent-2); }
+        .move-btn { background: rgba(236, 72, 153, 0.2); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.5); border-radius: 8px; width: 32px; height: 32px; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .move-btn:hover { background: #ec4899; color: #fff; transform: scale(1.1); }
+
+        button.ui-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); color: #fff; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: 0.2s; padding: 10px 15px;}
+        button.ui-btn:active { transform: scale(0.95); }
+        button.ui-btn:hover { background: rgba(255,255,255,0.1); }
+        button.btn-neon { width: 100%; padding: 15px; background: transparent; color: var(--accent-1); border: 2px solid var(--accent-1); text-transform: uppercase; font-weight: 700; box-shadow: 0 0 10px var(--neon-glow), inset 0 0 10px var(--neon-glow); border-radius: 12px; cursor: pointer; transition: 0.3s;}
+        button.btn-neon:hover { background: var(--accent-1); color: #fff; box-shadow: 0 0 20px var(--accent-1), 0 0 40px var(--accent-1); transform: translateY(-2px); }
+        button.btn-red { color: #f43f5e; border-color: rgba(244,63,94,0.5); }
+        button.btn-red:hover { background: rgba(244,63,94,0.2); }
+        input { width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--card-border); color: #fff; padding: 12px; border-radius: 12px; font-size: 1rem; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--accent-1); }
+        textarea.inp-area { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; padding: 15px; border-radius: 12px; min-height: 120px; resize: vertical; outline: none; margin-bottom: 10px; }
+        input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8;}
+        
+        .rem-form { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border); }
+        .rem-form-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block;}
+        .rem-form-row { margin-bottom: 12px; }
+        .rem-form-row:last-of-type { margin-bottom: 0; }
+        .rem-form-bottom { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px;}
+        .rem-form-bottom > div { flex-shrink: 0; }
+        .rem-add-btn { flex-grow: 1; padding: 12px; background: var(--accent-4); color: #000; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px;}
+        .rem-add-btn:hover { background: #fbbf24; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); }
+
+        .rem-list { list-style: none; max-height: 280px; overflow-y: auto; padding-right: 5px; }
+        .rem-list::-webkit-scrollbar { width: 5px; } .rem-list::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 10px; }
+        .rem-empty { text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.9rem; }
+        
+        .rem-item { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent-4); animation: slideIn 0.3s ease; }
+        .rem-item.fired { border-left-color: #10b981; opacity: 0.6; }
+        .rem-item-time { font-size: 1.3rem; font-weight: 700; color: var(--accent-4); font-variant-numeric: tabular-nums; min-width: 60px;}
+        .rem-item.fired .rem-item-time { color: #10b981; text-decoration: line-through; }
+        .rem-item-body { flex-grow: 1; }
+        .rem-item-text { font-size: 0.95rem; margin-bottom: 3px; }
+        .rem-item-meta { font-size: 0.75rem; color: var(--text-muted); }
+        .rem-item-del { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 1.1rem; transition: 0.2s; }
+        .rem-item-del:hover { color: #f43f5e; transform: scale(1.2); }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        
+        .todo-list { list-style: none; max-height: 200px; overflow-y: auto; padding-right: 5px; margin-top: 10px;}
+        .todo-list::-webkit-scrollbar { width: 5px; } .todo-list::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 10px; }
+        .todo-item { background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .todo-item.completed span { text-decoration: line-through; color: var(--text-muted); }
+        .calc-display { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; font-size: 2rem; text-align: right; margin-bottom: 15px; overflow-x: auto; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .calc-btn { padding: 15px 0; font-size: 1.2rem; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: #fff; border-radius: 12px; cursor: pointer; }
+        .calc-btn.op { color: var(--accent-2); font-weight: bold; } .calc-btn.eq { background: var(--accent-1); border-color: var(--accent-1); grid-column: span 2; } .calc-btn.clr { color: #f43f5e; }
+        .stopwatch-display { font-size: 3.5rem; font-weight: 700; text-align: center; margin: 20px 0 30px; font-variant-numeric: tabular-nums; }
+        .sw-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .qr-wrapper { display: flex; justify-content: center; align-items: center; background: #fff; padding: 20px; border-radius: 16px; margin: 15px 0; min-height: 220px; }
+        .fixer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cal-header button { background: transparent; border: none; padding: 5px 15px; font-size: 1.2rem; color: var(--accent-3); cursor: pointer;}
+        .cal-month { font-weight: 600; font-size: 1.1rem; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; margin-bottom: 15px; }
+        .cal-day-name { color: var(--text-muted); font-size: 0.8rem; font-weight: 600; }
+        .cal-cell { padding: 8px 0; border-radius: 8px; cursor: pointer; transition: 0.2s; position: relative; font-size: 0.9rem; }
+        .cal-cell:hover { background: rgba(255,255,255,0.1); } .cal-cell.empty { cursor: default; } .cal-cell.empty:hover { background: transparent; }
+        .cal-cell.active { background: var(--accent-3); color: #000; font-weight: bold; transform: scale(1.1); z-index: 2; box-shadow: 0 0 10px var(--accent-3); }
+        .cal-has-task::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background-color: #ec4899; border-radius: 50%; box-shadow: 0 0 5px #ec4899; }
+        .cal-cell.active.cal-has-task::after { background-color: #fff; box-shadow: none; }
+        footer { text-align: center; padding: 30px 20px; color: var(--text-muted); font-size: 0.9rem; margin-top: auto; }
+        footer span { color: var(--accent-1); font-weight: 600; }
+        @media (max-width: 768px) { .top-btn { top: 20px; } #menuBtn { left: 15px; } #editBtn { right: 15px; } .rem-form-bottom { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+
+    <div class="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+    <div class="overlay-bg" id="mainOverlay" onclick="ui.closeAll()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <button class="sidebar-btn" onclick="ui.openModal('editorModal')">📝 Лёгкий редактор</button>
+        <button class="sidebar-btn" onclick="ui.openModal('sheetModal')">📊 Легкая таблица</button>
+    </div>
+
+    <div class="modal" id="editorModal">
+        <button class="modal-close" onclick="ui.closeAll()">✕</button>
+        <h2>Редактор текста</h2>
+        <div class="modal-body">
+            <textarea id="lightEditorArea" placeholder="Писать здесь..."></textarea>
+            <div class="modal-controls">
+                <button class="ui-btn btn-red" onclick="document.getElementById('lightEditorArea').value=''; tools.saveEditor()">Удалить всё</button>
+                <button class="ui-btn" onclick="tools.copyEditor()">Скопировать</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="sheetModal">
+        <button class="modal-close" onclick="ui.closeAll()">✕</button>
+        <h2>Электронная таблица</h2>
+        <div class="modal-body">
+            <div class="spreadsheet-container"><table id="sheetTable"></table></div>
+            <div class="modal-controls"><button class="ui-btn btn-red" onclick="tools.clearSheet()">Очистить</button></div>
+        </div>
+    </div>
+
+    <header>
+        <button class="top-btn" id="menuBtn" onclick="ui.toggleSidebar()">☰</button>
+        <h1>MixedTools</h1>
+        <div class="clock-container">
+            <div class="clock-time" id="clockTime">00:00:00</div>
+            <div class="clock-date" id="clockDate">-- -- ----</div>
+        </div>
+        <button class="top-btn" id="editBtn" onclick="ui.toggleEditMode()" title="Поменять местами">⚙</button>
+    </header>
+
+    <main class="container" id="cardContainer">
+        
+        <!-- 🔔 НАПОМИНАНИЯ -->
+        <div class="card" data-id="reminders">
+            <div class="card-controls">
+                <button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button>
+                <button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button>
+            </div>
+            <h2>🔔 Напоминания</h2>
+            
+            <div class="rem-form">
+                <div class="rem-form-row">
+                    <label class="rem-form-label">Текст напоминания</label>
+                    <input type="text" id="remInput" placeholder="Например: Позвонить маме">
+                </div>
+                <div class="rem-form-bottom">
+                    <div style="flex-grow:1;">
+                        <label class="rem-form-label">Время (МСК)</label>
+                        <input type="time" id="remTime">
+                    </div>
+                    <button class="rem-add-btn" onclick="reminders.add()">+ Добавить</button>
+                </div>
+            </div>
+
+            <ul class="rem-list" id="remList"></ul>
+        </div>
+
+        <div class="card" data-id="textfixer">
+            <div class="card-controls"><button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button><button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button></div>
+            <h2>Исправитель текста</h2>
+            <textarea id="fixerInput" class="inp-area" placeholder="Текст с КАПС ЛОКОМ или кривыми пробелами..."></textarea>
+            <div class="fixer-grid">
+                <button class="ui-btn" style="font-size: 0.85rem;" onclick="textFixer.fixCaps()">Исправить CAPS</button>
+                <button class="ui-btn" style="font-size: 0.85rem;" onclick="textFixer.cleanSpaces()">Очистить пробелы</button>
+                <button class="ui-btn" style="grid-column: span 2; font-size: 0.85rem;" onclick="textFixer.makeColumn()">Сделать столбиком</button>
+            </div>
+            <button class="btn-neon" id="fixerCopyBtn" onclick="textFixer.copy()">Скопировать</button>
+        </div>
+
+        <div class="card" data-id="calc">
+            <div class="card-controls"><button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button><button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button></div>
+            <h2>Калькулятор</h2>
+            <div class="calc-display" id="calcDisplay">0</div>
+            <div class="calc-grid">
+                <button class="calc-btn clr" onclick="calc.clear()">C</button>
+                <button class="calc-btn op" onclick="calc.append('(')">(</button>
+                <button class="calc-btn op" onclick="calc.append(')')">)</button>
+                <button class="calc-btn op" onclick="calc.append('/')">÷</button>
+                <button class="calc-btn" onclick="calc.append('7')">7</button>
+                <button class="calc-btn" onclick="calc.append('8')">8</button>
+                <button class="calc-btn" onclick="calc.append('9')">9</button>
+                <button class="calc-btn op" onclick="calc.append('*')">×</button>
+                <button class="calc-btn" onclick="calc.append('4')">4</button>
+                <button class="calc-btn" onclick="calc.append('5')">5</button>
+                <button class="calc-btn" onclick="calc.append('6')">6</button>
+                <button class="calc-btn op" onclick="calc.append('-')">-</button>
+                <button class="calc-btn" onclick="calc.append('1')">1</button>
+                <button class="calc-btn" onclick="calc.append('2')">2</button>
+                <button class="calc-btn" onclick="calc.append('3')">3</button>
+                <button class="calc-btn op" onclick="calc.append('+')">+</button>
+                <button class="calc-btn" onclick="calc.append('0')">0</button>
+                <button class="calc-btn" onclick="calc.append('.')">.</button>
+                <button class="calc-btn eq" onclick="calc.calculate()">=</button>
+            </div>
+        </div>
+
+        <div class="card" data-id="stopwatch">
+            <div class="card-controls"><button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button><button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button></div>
+            <h2>Секундомер</h2>
+            <div class="stopwatch-display" id="swDisplay">00:00.00</div>
+            <div class="sw-controls">
+                <button class="ui-btn" style="color: #10b981; border-color: rgba(16,185,129,0.5);" id="swStartBtn" onclick="stopwatch.start()">Старт</button>
+                <button class="ui-btn btn-red" id="swStopBtn" onclick="stopwatch.stop()">Стоп</button>
+                <button class="ui-btn" style="grid-column: span 2;" onclick="stopwatch.reset()">Сброс</button>
+            </div>
+        </div>
+
+        <div class="card" data-id="calendar">
+            <div class="card-controls"><button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button><button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button></div>
+            <h2>Календарь Задач</h2>
+            <div class="cal-header">
+                <button onclick="cal.prevMonth()">&#10094;</button>
+                <div class="cal-month" id="calMonthDisplay">Месяц</div>
+                <button onclick="cal.nextMonth()">&#10095;</button>
+            </div>
+            <div class="cal-grid">
+                <div class="cal-day-name">Пн</div><div class="cal-day-name">Вт</div><div class="cal-day-name">Ср</div>
+                <div class="cal-day-name">Чт</div><div class="cal-day-name">Пт</div><div class="cal-day-name">Сб</div><div class="cal-day-name">Вс</div>
+            </div>
+            <div class="cal-grid" id="calDays"></div>
+            <div class="cal-task-section" style="border-top: 1px solid var(--card-border); padding-top: 15px; margin-top: auto;">
+                <span style="font-size:0.85rem; color:var(--accent-3); display:block; margin-bottom:10px;" id="calSelectedDateText">Задачи</span>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="calInput" placeholder="Новая задача..." onkeypress="if(event.key==='Enter') cal.addTask()">
+                    <button class="ui-btn" style="background:var(--accent-1); border:none; padding: 0 20px;" onclick="cal.addTask()">+</button>
+                </div>
+                <ul class="todo-list" id="calTaskList"></ul>
+            </div>
+        </div>
+
+        <div class="card" data-id="qr">
+            <div class="card-controls"><button class="move-btn" onclick="grid.move(this, -1)">&#10094;</button><button class="move-btn" onclick="grid.move(this, 1)">&#10095;</button></div>
+            <h2>QR-Генератор</h2>
+            <input type="text" id="qrInput" placeholder="Текст или ссылка..." style="margin-bottom: 15px;">
+            <div id="qrContainer" class="qr-wrapper"></div>
+            <button class="btn-neon" onclick="qrGen.download()">Скачать PNG</button>
+        </div>
+
+    </main>
+
+    <footer>Created by <span>VortexFlare</span></footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clockTime').innerText = now.toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('clockDate').innerText = now.toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' }).replace(',', '');
+            requestAnimationFrame(updateClock);
+        }
+
+        const reminders = {
+            items: JSON.parse(localStorage.getItem('remData_v2')) || [],
+            inpText: document.getElementById('remInput'),
+            inpTime: document.getElementById('remTime'),
+            list: document.getElementById('remList'),
+
+            init() {
+                this.cleanOldFired(); 
+                this.render();
+                setInterval(() => { this.checkTime(); this.render(); }, 10000);
+                this.checkTime();
+            },
+
+            requestPerm() {
+                if ("Notification" in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                    Notification.requestPermission();
+                }
+            },
+
+            add() {
+                const text = this.inpText.value.trim();
+                const time = this.inpTime.value;
+                if (!text) { alert('Введите текст напоминания!'); return; }
+                if (!time) { alert('Выберите время!'); return; }
+                
+                if ("Notification" in window && Notification.permission === 'default') {
+                    this.requestPerm();
+                }
+
+                this.items.push({ id: Date.now(), text, time, fired: false, createdAt: Date.now() });
+                this.items.sort((a, b) => a.time.localeCompare(b.time));
+                this.inpText.value = ''; this.inpTime.value = '';
+                this.save();
+            },
+
+            delete(id) { this.items = this.items.filter(i => i.id !== id); this.save(); },
+            save() { localStorage.setItem('remData_v2', JSON.stringify(this.items)); this.render(); },
+
+            cleanOldFired() {
+                const dayAgo = Date.now() - 24*60*60*1000;
+                this.items = this.items.filter(i => !(i.fired && i.createdAt < dayAgo));
+            },
+
+            getMskNow() {
+                const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+                const h = parts.find(p => p.type === 'hour').value;
+                const m = parts.find(p => p.type === 'minute').value;
+                return { h: parseInt(h), m: parseInt(m), total: parseInt(h) * 60 + parseInt(m) };
+            },
+
+            getTimeUntil(time) {
+                const [h, m] = time.split(':').map(Number);
+                const target = h * 60 + m;
+                const now = this.getMskNow().total;
+                let diff = target - now;
+                if (diff < 0) return null; 
+                if (diff === 0) return 'сейчас';
+                const hh = Math.floor(diff / 60);
+                const mm = diff % 60;
+                if (hh > 0) return `через ${hh}ч ${mm}м`;
+                return `через ${mm} мин`;
+            },
+
+            render() {
+                if (this.items.length === 0) {
+                    this.list.innerHTML = `<div class="rem-empty">📭 Пока нет напоминаний.<br>Добавьте первое!</div>`;
+                    return;
+                }
+                this.list.innerHTML = this.items.map(item => {
+                    const timeLeft = this.getTimeUntil(item.time);
+                    let meta = '';
+                    if (item.fired) meta = '✅ Сработало';
+                    else if (timeLeft === null) meta = '⏱ Время прошло';
+                    else meta = `⏳ ${timeLeft}`;
+                    
+                    return `
+                        <li class="rem-item ${item.fired ? 'fired' : ''}">
+                            <div class="rem-item-time">${item.time}</div>
+                            <div class="rem-item-body">
+                                <div class="rem-item-text">${item.text}</div>
+                                <div class="rem-item-meta">${meta}</div>
+                            </div>
+                            <button class="rem-item-del" onclick="reminders.delete(${item.id})" title="Удалить">✕</button>
+                        </li>
+                    `;
+                }).join('');
+            },
+
+            checkTime() {
+                const now = this.getMskNow();
+                let changed = false;
+                this.items.forEach(item => {
+                    if (item.fired) return;
+                    const [h, m] = item.time.split(':').map(Number);
+                    const itemTotal = h * 60 + m;
+                    if (now.total >= itemTotal) {
+                        item.fired = true;
+                        changed = true;
+                        this.fire(item);
+                    }
+                });
+                if (changed) this.save();
+            },
+
+            fire(item) {
+                if ("Notification" in window && Notification.permission === 'granted') {
+                    try {
+                        const n = new Notification("⏰ " + item.time + " — Напоминание", {
+                            body: item.text,
+                            icon: "https://cdn-icons-png.flaticon.com/512/3239/3239958.png",
+                            requireInteraction: true
+                        });
+                        n.onclick = () => { window.focus(); n.close(); };
+                    } catch(e) {}
+                }
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.value = 800;
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                    osc.start(); osc.stop(ctx.currentTime + 0.5);
+                } catch(e) {}
+            }
+        };
+
+        const ui = {
+            sidebar: document.getElementById('sidebar'), overlay: document.getElementById('mainOverlay'),
+            editor: document.getElementById('editorModal'), sheet: document.getElementById('sheetModal'),
+            toggleSidebar() { if(this.sidebar.classList.contains('open')) this.closeAll(); else { this.sidebar.classList.add('open'); this.overlay.classList.add('show'); } },
+            openModal(id) { this.closeAll(); setTimeout(() => { document.getElementById(id).classList.add('open'); this.overlay.classList.add('show'); }, 100); },
+            closeAll() { this.sidebar.classList.remove('open'); this.editor.classList.remove('open'); this.sheet.classList.remove('open'); this.overlay.classList.remove('show'); },
+            isEditMode: false,
+            toggleEditMode() { this.isEditMode = !this.isEditMode; const btn = document.getElementById('editBtn'); if (this.isEditMode) { document.body.classList.add('is-edit-mode'); btn.classList.add('active'); } else { document.body.classList.remove('is-edit-mode'); btn.classList.remove('active'); } }
+        };
+
+        const grid = {
+            c: document.getElementById('cardContainer'),
+            load() { const o = JSON.parse(localStorage.getItem('mixedToolsOrder')); if (o) o.forEach(id => { const el = this.c.querySelector(`[data-id="${id}"]`); if(el) this.c.appendChild(el); }); },
+            save() { localStorage.setItem('mixedToolsOrder', JSON.stringify(Array.from(this.c.children).map(c => c.getAttribute('data-id')))); },
+            move(btn, dir) {
+                const card = btn.closest('.card'), cards = Array.from(this.c.children), idx = cards.indexOf(card);
+                if (dir === -1 && idx > 0) this.swap(card, cards[idx - 1]);
+                if (dir === 1 && idx < cards.length - 1) this.swap(card, cards[idx + 1]);
+            },
+            swap(a, b) {
+                const state = Array.from(this.c.children).map(c => ({ el: c, rect: c.getBoundingClientRect() }));
+                const sibA = a.nextSibling === b ? a : a.nextSibling;
+                b.parentNode.insertBefore(a, b); b.parentNode.insertBefore(b, sibA);
+                state.forEach(({ el, rect }) => {
+                    const nRect = el.getBoundingClientRect(), dx = rect.left - nRect.left, dy = rect.top - nRect.top;
+                    if (dx !== 0 || dy !== 0) { el.style.transform = `translate(${dx}px, ${dy}px)`; el.style.transition = 'none'; requestAnimationFrame(() => { el.style.transform = ''; el.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; }); }
+                });
+                this.save();
+            }
+        };
+
+        const textFixer = {
+            i: document.getElementById('fixerInput'), b: document.getElementById('fixerCopyBtn'),
+            init() { this.i.value = localStorage.getItem('fixerData') || ''; this.i.addEventListener('input', () => localStorage.setItem('fixerData', this.i.value)); },
+            fixCaps() { this.i.value = this.i.value.toLowerCase().replace(/(^\s*|[.!?]\s+|\n\s*)([a-zа-яё])/g, (m, p1, p2) => p1 + p2.toUpperCase()); this.s(); },
+            cleanSpaces() { this.i.value = this.i.value.replace(/[ \t]{2,}/g, ' ').replace(/\n\s*\n/g, '\n').trim(); this.s(); },
+            makeColumn() { this.i.value = this.i.value.replace(/[\n\t]/g, ' ').replace(/[ \t]{2,}/g, ' ').trim().split(' ').join('\n'); this.s(); },
+            s() { localStorage.setItem('fixerData', this.i.value); },
+            copy() { navigator.clipboard.writeText(this.i.value); const old = this.b.innerText; this.b.innerText = 'Скопировано!'; this.b.style.background = 'var(--accent-1)'; this.b.style.color = '#fff'; setTimeout(() => { this.b.innerText = old; this.b.style.background = ''; this.b.style.color = ''; }, 2000); }
+        };
+
+        const tools = {
+            ea: document.getElementById('lightEditorArea'), st: document.getElementById('sheetTable'),
+            init() { this.ea.value = localStorage.getItem('lightEditor') || ''; this.ea.addEventListener('input', () => localStorage.setItem('lightEditor', this.ea.value)); let s = localStorage.getItem('lightSheet'); if(s) this.st.innerHTML = s; else this.build(); this.st.addEventListener('input', () => localStorage.setItem('lightSheet', this.st.innerHTML)); },
+            saveEditor() { localStorage.setItem('lightEditor', this.ea.value); },
+            copyEditor() { navigator.clipboard.writeText(this.ea.value); alert('Скопировано!'); },
+            build() { let h = '<tr><th>#</th><th>A</th><th>B</th><th>C</th><th>D</th></tr>'; for(let i=1;i<=10;i++) h+=`<tr><th>${i}</th><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>`; this.st.innerHTML = h; localStorage.setItem('lightSheet', h); },
+            clearSheet() { this.build(); }
+        };
+
+        const calc = {
+            d: document.getElementById('calcDisplay'), curr: localStorage.getItem('calcData') || '0',
+            upd() { this.d.innerText = this.curr; this.d.scrollLeft = this.d.scrollWidth; localStorage.setItem('calcData', this.curr); },
+            append(v) { if(this.curr === '0' && v !== '.') this.curr = ''; if(this.curr === 'Error') this.curr = ''; this.curr += v; this.upd(); },
+            clear() { this.curr = '0'; this.upd(); }, calculate() { try { let r = new Function('return ' + this.curr)(); if(r % 1 !== 0) r = parseFloat(r.toFixed(8)); this.curr = String(r); } catch(e) { this.curr = 'Error'; } this.upd(); }, init() { this.upd(); }
+        };
+
+        const stopwatch = {
+            d: document.getElementById('swDisplay'), st: document.getElementById('swStartBtn'), sp: document.getElementById('swStopBtn'), sT: parseInt(localStorage.getItem('swStartT')) || 0, elT: parseInt(localStorage.getItem('swElapsT')) || 0, run: localStorage.getItem('swRun') === 'true', raf: null,
+            fmt(ms) { const s = Math.floor(ms/1000); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}.${String(Math.floor((ms%1000)/10)).padStart(2,'0')}`; },
+            tick() { this.d.innerText = this.fmt(this.elT + (Date.now() - this.sT)); this.raf = requestAnimationFrame(()=>this.tick()); },
+            start() { if(this.run) return; this.run=true; this.sT=Date.now(); localStorage.setItem('swRun','true'); localStorage.setItem('swStartT',this.sT); this.tick(); this.ui(); },
+            stop() { if(!this.run) return; this.run=false; cancelAnimationFrame(this.raf); this.elT += Date.now()-this.sT; localStorage.setItem('swRun','false'); localStorage.setItem('swElapsT',this.elT); this.ui(); },
+            reset() { this.run=false; cancelAnimationFrame(this.raf); this.sT=0; this.elT=0; localStorage.setItem('swRun','false'); localStorage.setItem('swElapsT','0'); this.d.innerText = this.fmt(0); this.ui(); },
+            ui() { this.st.style.opacity=this.run?'0.5':'1'; this.sp.style.opacity=!this.run?'0.5':'1'; }, init() { if(this.run) this.tick(); else this.d.innerText = this.fmt(this.elT); this.ui(); }
+        };
+
+        const qrGen = {
+            i: document.getElementById('qrInput'), c: document.getElementById('qrContainer'), o: null,
+            init() { const s = localStorage.getItem('qrData') || 'https://mixedtools.ru'; this.i.value = s; this.o = new QRCode(this.c, { text: s, width: 180, height: 180, colorDark: "#000", colorLight: "#fff", correctLevel: QRCode.CorrectLevel.H }); this.i.addEventListener('input', () => { const t = this.i.value.trim(); if(!t) { this.c.style.opacity='0.1'; return; } this.c.style.opacity='1'; this.o.makeCode(t); localStorage.setItem('qrData',t); }); },
+            download() { const cv = this.c.querySelector('canvas'); if(!cv) return; const a = document.createElement('a'); a.download = 'MixedTools-QR.png'; a.href = cv.toDataURL(); a.click(); }
+        };
+
+        const cal = {
+            date: new Date(), selD: '', data: JSON.parse(localStorage.getItem('calData')) || {},
+            daysE: document.getElementById('calDays'), mE: document.getElementById('calMonthDisplay'), txtE: document.getElementById('calSelectedDateText'), iE: document.getElementById('calInput'), lstE: document.getElementById('calTaskList'), mN: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
+            init() { const t=new Date(); this.sel(t.getFullYear(), t.getMonth(), t.getDate()); }, fStr(y,m,d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; },
+            render() { this.daysE.innerHTML = ''; const y=this.date.getFullYear(), m=this.date.getMonth(); this.mE.innerText = `${this.mN[m]} ${y}`; const fD = new Date(y,m,1).getDay(), off = fD===0?6:fD-1, dInM = new Date(y,m+1,0).getDate(); for(let i=0;i<off;i++) this.daysE.innerHTML += `<div class="cal-cell empty"></div>`; for(let d=1;d<=dInM;d++) { const ds = this.fStr(y,m,d), act = ds===this.selD?'active':'', has = (this.data[ds]&&this.data[ds].length)?'cal-has-task':''; this.daysE.innerHTML += `<div class="cal-cell ${act} ${has}" onclick="cal.sel(${y},${m},${d})">${d}</div>`; } },
+            sel(y,m,d) { this.date=new Date(y,m,d); this.selD=this.fStr(y,m,d); this.txtE.innerText=`Задачи: ${new Date(y,m,d).toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}`; this.render(); this.rT(); },
+            prevMonth() { this.date.setMonth(this.date.getMonth()-1); this.render(); }, nextMonth() { this.date.setMonth(this.date.getMonth()+1); this.render(); }, save() { localStorage.setItem('calData', JSON.stringify(this.data)); this.render(); },
+            rT() { this.lstE.innerHTML=''; const t=this.data[this.selD]||[]; if(!t.length) { this.lstE.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:0.9rem;">Нет задач</li>`; return; } t.forEach((it,i) => this.lstE.innerHTML += `<li class="todo-item ${it.d?'completed':''}"> <span onclick="cal.tog(${i})" style="cursor:pointer;flex-grow:1">${it.t}</span><button class="ui-btn btn-red" style="padding:5px; border:none; background:transparent" onclick="cal.del(${i})">✕</button></li>`); },
+            addTask() { const v=this.iE.value.trim(); if(!v) return; if(!this.data[this.selD]) this.data[this.selD]=[]; this.data[this.selD].push({t:v,d:false}); this.iE.value=''; this.save(); this.rT(); }, tog(i) { this.data[this.selD][i].d = !this.data[this.selD][i].d; this.save(); this.rT(); }, del(i) { this.data[this.selD].splice(i,1); if(!this.data[this.selD].length) delete this.data[this.selD]; this.save(); this.rT(); }
+        };
+
+        window.onload = () => { updateClock(); grid.load(); calc.init(); stopwatch.init(); qrGen.init(); cal.init(); textFixer.init(); tools.init(); reminders.init(); };
+    </script>
+</body>
+</html>
